@@ -1,0 +1,4 @@
+build/
+*.idsig
+wxjsw-debug.keystore
+.DS_Store
