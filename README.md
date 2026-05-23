@@ -1,46 +1,86 @@
-# 西瓜影院轻量版 Android TV 壳
+# 西瓜影院轻量版 Android TV
 
-这是给老款小米盒子准备的极简 WebView 壳应用，启动后直接打开 `https://wxjsw.com/`。
+一个面向 Android TV / 电视盒子的原生壳应用。应用使用隐藏 WebView 读取 `wxjsw.com` 的页面数据，前台界面由原生 Android 控件渲染，遥控器焦点、分类筛选、影片详情和播放体验都按电视场景设计。
 
-## 设计目标
+## 功能
 
-- 尽量少依赖，降低老盒子运行负担。
-- 支持 Android TV/盒子启动器入口。
-- 支持网页后退、视频全屏和基础错误提示。
+- 原生首页和分类列表，支持遥控器方向键操作。
+- 分类筛选、分页和加载中遮罩，加载超过 10 秒后允许继续操作。
+- 影片详情在右侧区域内展示，包含封面、主演、导演、简介和剧集列表。
+- 剧集支持详情页局部预览播放，选中预览区后可切到全屏。
+- 播放器基于 `TextureView + MediaPlayer`，局部预览和全屏之间复用同一个播放视图。
+- 切换页面时自动停止详情页预览，避免后台继续播放。
 
-## 重要限制
+## 项目结构
 
-- 播放能力取决于盒子系统 WebView 和目标网站播放器。
-- 如果网站使用新版浏览器特性、DRM、复杂广告脚本或不兼容老 TLS，APK 壳无法彻底解决。
-- 本项目只提供网页容器，不内置、不抓取、不分发任何视频内容。
+```text
+app/src/main/AndroidManifest.xml
+app/src/main/java/com/gc/wxjswtv/
+app/src/main/res/
+build_apk.sh
+```
 
-## 手工构建说明
+主要模块：
 
-本项目是无 Gradle 的轻量工程，可以用 Android SDK 命令行工具构建。当前机器如需直接打包 APK，需要可用的 `aapt`、`javac`、`d8`、`zipalign` 和 `apksigner`。
+- `MainActivity`：主界面、分类、详情和焦点调度。
+- `WxjswDataParser`：解析首页、分类、详情和播放页 HTML。
+- `NativePlayerController`：原生播放器控制。
+- `TextureMediaPlayerView`：可在局部和全屏之间平滑切换的播放视图。
+- `FilterPanelController`：分类筛选面板控制。
+- `CategoryLoadingController`：分类加载遮罩和超时解锁。
 
-调试签名文件会保存在项目根目录的 `wxjsw-debug.keystore`，这样重复安装时签名保持一致；该文件不提交。
+## 构建
+
+本项目没有使用 Gradle，直接通过 Android SDK 命令行工具构建。当前脚本默认使用：
+
+- Android SDK Platform：`android-36.1`
+- Build Tools：`36.1.0`
+- Java：`/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home`
+- 最低系统版本：Android 4.1，`minSdkVersion=16`
+
+执行：
 
 ```bash
 ./build_apk.sh
 ```
 
-生成文件：
+生成 APK：
 
 ```text
 build/outputs/wxjsw-tv-shell.apk
 ```
 
-## 安装到盒子
+调试签名文件会生成在项目根目录：
 
-先在小米盒子里打开开发者选项和 USB 调试，电脑能看到设备后执行：
+```text
+wxjsw-debug.keystore
+```
+
+该文件不会提交到仓库。
+
+## 安装
+
+USB 调试连接电视盒子后执行：
 
 ```bash
 adb install -r build/outputs/wxjsw-tv-shell.apk
 ```
 
-如果通过网络调试安装，先连接盒子的 IP：
+网络调试：
 
 ```bash
 adb connect 盒子IP地址:5555
 adb install -r build/outputs/wxjsw-tv-shell.apk
 ```
+
+启动应用：
+
+```bash
+adb shell am start -n com.gc.wxjswtv/.MainActivity
+```
+
+## 说明
+
+- 本项目不内置、不分发任何视频内容，只把目标网站页面作为数据源。
+- 播放能力取决于设备系统的 `MediaPlayer` 对视频格式和 HLS 的支持。
+- 当前主要适配电视横屏和遥控器操作，手机触摸布局还没有单独分支。
